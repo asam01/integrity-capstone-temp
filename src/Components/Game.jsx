@@ -5,8 +5,8 @@ import {Helmet} from 'react-helmet';
 import {BrowserRouter as Router, Route} from 'react-router-dom';
 
 
-import Home from './Home';
-import GameLobby from './quiz/Lobby.js';
+import Home from './pages/Home';
+import GameLobby from './pages/Lobby.js';
 import Play from './quiz/Play.js';
 import SignIn from "./authenticate/SignIn";
 import SignUp from "./authenticate/SignUp";
