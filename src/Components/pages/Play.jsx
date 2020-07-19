@@ -1,10 +1,11 @@
 import React, {Component,Fragment} from 'react';
 import {fire} from '../../firebase.js';
-import {Quiz} from '../quiz/play/Quiz';
+import {Quiz} from '../quiz/play/Quiz.jsx';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import FormControl from '@material-ui/core/FormControl';
 import {Helmet} from 'react-helmet';
+import {isRedirect} from "@reach/router";
 
 function fetchGame(gameId,callback) {
     fire.database().ref('/Rooms').orderByChild('gameId').equalTo(gameId).once('value',callback);
@@ -17,14 +18,14 @@ class Play extends Component {
         this.state = {
             game: {},
             gameId: '',
+            gametype: 'other',
             recentGameId: localStorage.getItem('RecentGameIdPlay') || '',
             playerKey: '',
-            recentGame: null,
-            chartURL: null,
+            chartURLs: null,
             technicalIndicators: null,
             currentCash: null,
             currentShares: null,
-            leaderboard: null,
+            currentPrice: null,
         };
         this.createPlayer = this.createPlayer.bind(this);
         this.joinGame = this.joinGame.bind(this);
@@ -32,9 +33,8 @@ class Play extends Component {
 
     componentDidMount() {
         const {recentGameId} = this.state;
-        this.joinGame(recentGameId);
         if (recentGameId) {
-            fetchGame(recentGameId, (snapshot) => {
+            fetchGame('default',recentGameId, (snapshot) => {
                 if (snapshot.val()) {
                     var game;
                     snapshot.forEach((child) => {
@@ -48,15 +48,24 @@ class Play extends Component {
         }
     }
 
+    handleChangeSelect = (event) => {
+        this.setState({ [event.target.name]: event.target.value });
+    };
+
     handleChange = name => (event) => {
         this.setState({
             [name]: event.target.value,
         });
     };
 
+    updateShares(changeInShares,playerId) {
+        var current
+    }
+
     joinGame(gameId) {
+        const {gametype} = this.state;
         const that = this;
-        fetchGame(gameId, (snapshot) => {
+        fetchGame(gametype, gameId, (snapshot) => {
             if (snapshot.val()) {
                 var game;
                 snapshot.forEach((child) => {
@@ -123,7 +132,7 @@ class Play extends Component {
     }
 
     render () {
-        const {game,playerKey,gameId,recentGameId,recentGame} = this.state;
+        const {game,playerKey,gameId,recentGameId,recentGame,isRedirected,gametype} = this.state;
         if (!game.phase) {
             return (
                 <div className="page-container play-page">
@@ -138,7 +147,7 @@ class Play extends Component {
         }
         return (
             <div className="page-container play-page">
-                <Quiz game={game} createPlayer={this.createPlayer} playerKey={playerKey}/>
+                {game.gametype === 'quiz' && <Quiz game={game} createPlayer={this.createPlayer} playerKey={playerKey}/>}
             </div>
         );
     }

@@ -6,8 +6,8 @@ import {BrowserRouter as Router, Route} from 'react-router-dom';
 
 
 import Home from './pages/Home';
-import GameLobby from './pages/Lobby.js';
-import Play from './quiz/Play.js';
+import GameLobby from './pages/Lobby.jsx';
+import Play from './pages/Play.jsx';
 import SignIn from "./authenticate/SignIn";
 import SignUp from "./authenticate/SignUp";
 

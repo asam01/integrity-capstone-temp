@@ -2,8 +2,8 @@ import React, { Component } from 'react';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import FormControl from '@material-ui/core/FormControl';
-import Quiz from '../quiz/host/Quiz';
-import { fire, fireGolf } from '../../base';
+import {Quiz} from '../quiz/host/Quiz.js';
+import { fire} from '../../firebase.js';
 
 function fetchGame(gameId, callback) {
     return fire.database().ref('/Rooms').orderByChild('gameId').equalTo(gameId).once('value',callback);
@@ -14,8 +14,10 @@ class Host extends Component {
         super(props);
         this.state = {
             game: {},
+            gametype: 'other',
             gameId: localStorage.getItem('RecentGameId') || '',
             password: '',
+            isRedirected: Date.now() - localStorage.getItem('lastTimestamp') < 2000,
         }
         this.updateGame = this.updateGame.bind(this);
         this.initGameListener = this.initGameListener.bind(this);
@@ -23,6 +25,14 @@ class Host extends Component {
         this.quitGame = this.quitGame.bind(this);
         this.endGame = this.endGame.bind(this);
     }
+
+    componentDidMount() {
+        const {gameId} = this.state;
+    }
+
+    handleChangeSelect = (event) => {
+        this.setState({[event.target.name]:event.target.value});
+    };
 
     handleChange = name => (event) => {
         this.setState({
@@ -32,7 +42,7 @@ class Host extends Component {
 
     updateGame(gameupdate) {
         const {game} = this.state;
-        fire.database().ref('games/${game.key}').update(gameupdate);
+        fire.database().ref('Rooms/${game.key}').update(gameupdate);
     }
 
     restartGame() {
@@ -45,7 +55,6 @@ class Host extends Component {
     quitGame() {
         const {toggleHeader} = this.props;
         this.updateGame({phase:null});
-        toggleHeader(true);
     }
 
     endGame(){
@@ -53,8 +62,7 @@ class Host extends Component {
     }
 
     joinGame(gameId) {
-        const {password} = this.state;
-        const {toggleHeader} = this.props;
+        const {password,gametype} = this.state;
         const that = this;
         fetchGame(gameId, (snapshot) => {
             if (snapshot.val()) {
@@ -63,8 +71,7 @@ class Host extends Component {
                     game = child.val();
                 });
                 if (game.password === password) {
-                    that.initGameLIstener(game);
-                    toggleHeader();
+                    that.initGameListener(game);
                 } else {
                     //no matching game
                 }
@@ -94,8 +101,9 @@ class Host extends Component {
             }
         });
     }
+
     render() {
-        const {game, gameId, password} = this.state;
+        const {game, gameId, password, isRedirected, gametype} = this.state;
         const gameFunctions = {
             update: this.updateGame,
             restart: this.restartGame,
@@ -116,9 +124,10 @@ class Host extends Component {
                 </div>
             )
         }
+
         return (
             <div className="page-container host-page">
-                <Quiz game={game} gameFunc={gameFunctions}/>
+                {game.gametype === 'quiz' && <Quiz game={game} gameFunc={gameFunctions}/>}
             </div>
         );
     }

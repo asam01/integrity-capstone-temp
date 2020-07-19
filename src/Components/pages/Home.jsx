@@ -22,11 +22,14 @@ class Home extends Component {
                         <h1>toohak app</h1>
                         <div className="play-button-container">
                             <ul>
-                                <li><Link to="/play/lobby">Play</Link></li>
+                                <li><Link to="/play">Play</Link></li>
                             </ul>
                         </div>
                         <div className="host-button-container">
-                            <p><Link to="/play/create">Create a room</Link></p>
+                            <p><Link to="/host">Host a room</Link></p>
+                        </div>
+                        <div className="create-button-container">
+                            <p><Link to="/create">Create a room</Link></p>
                         </div>
                         <div className="auth-container">
                             <Link to="/auth/signIn">Login</Link>
