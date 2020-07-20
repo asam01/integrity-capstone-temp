@@ -25,6 +25,7 @@ class Create extends Component {
     }
 
     createGame() {
+        console.log("create game called");
         const that = this;
         //create game doc in firestore database
         var _gameId = generateGameId();
@@ -58,7 +59,7 @@ class Create extends Component {
 
             <div className="app-page create-page">
                 {pagetype === 'not-created' &&
-                    <button onclick={() => this.createGame()}> Create Game! </button>
+                    <button onClick={() => this.createGame()}> Create Game! </button>
                 }
 
                 {pagetype === 'created' && (
