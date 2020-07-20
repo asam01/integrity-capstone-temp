@@ -4,21 +4,23 @@ import "firebase/firestore";
 
 const STARTING_MONEY = 10000;
 
-export const setUpRoom =  async (db,NumOfSymbols,Rounds,userID,password) => {
-    const roomRef = await db.collection('Rooms').doc();
-    const roomID = roomRef.id;
-
-    const symbolsL = await initSymbols(db,null,null,NumOfSymbols)
-    const datesD = await initDates(db,symbolsL,Rounds)
+export const setUpRoom = (db,NumOfSymbols,Rounds,userID,password) => {
+    const roomRef = db.collection('Rooms').doc();
     roomRef.set({
-        symbols: symbolsL,
         day_index: 0,
-        dates: datesD["dates"],
         phase: 'no-host',
         password: password,
     });
-
-    await initializeQuiz(symbolsL,roomID,datesD["period"],datesD["dates"])
+    const roomID = roomRef.id;
+    initSymbols(db,null,null,NumOfSymbols).then((symbolsL) => {
+        initDates(db,symbolsL,Rounds).then((datesD)=> {
+            roomRef.update({
+                symbols: symbolsL,
+                dates: datesD["dates"],
+            });
+            initializeQuiz(symbolsL,roomID,datesD["period"],datesD["dates"]);
+        });
+    });
 
     // const usersRef = roomRef.collection('users');
     // const userRef = usersRef.doc(userID);
@@ -38,7 +40,6 @@ export const setUpRoom =  async (db,NumOfSymbols,Rounds,userID,password) => {
 export const getUserShares = async (db, roomID, userID) => {
     const userRef = db.collection('Rooms').doc(roomID)
         .collection('users').doc(userID);
-
     const userDoc = await userRef.get();
     const userData = userDoc.data();
     return userData.investments;
