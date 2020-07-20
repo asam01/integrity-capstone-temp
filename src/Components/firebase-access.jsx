@@ -14,7 +14,7 @@ export const setUpRoom =  async (db,NumOfSymbols,Rounds,userID,password) => {
         symbols: symbolsL,
         day_index: 0,
         dates: datesD["dates"],
-        phase: 'not-joined',
+        phase: 'no-host',
         password: password,
     });
 

@@ -23,6 +23,7 @@ class Host extends Component {
         super(props);
         this.state = {
             phase: 'not-joined',
+            questionNum: 0,
             gameId: null,
             password: '',
             authenticated: 'no',
@@ -30,7 +31,7 @@ class Host extends Component {
             users: [],
         }
         this.joinGame = this.joinGame.bind(this);
-        this.updateGame = this.updateGame.bind(this);
+        this.updatePhase = this.updatePhase.bind(this);
         this.initGameListener = this.initGameListener.bind(this);
         this.restartGame = this.restartGame.bind(this);
         this.quitGame = this.quitGame.bind(this);
@@ -54,13 +55,14 @@ class Host extends Component {
         });
     }
 
-    updateGamephase(newPhase,incrementQuestion) {
-
-    }
-
-    updateGame(gameupdate) {
-        const {game} = this.state;
-        fire.database().ref('Rooms/${game.key}').update(gameupdate);
+    updatePhase(gameupdate) {
+        const {gameId} = this.state;
+        this.setState({
+            phase: gameupdate,
+        })
+        db.collection('Rooms').doc(gameId).update({
+            phase: gameupdate,
+        });
     }
 
     restartGame() {
@@ -79,7 +81,7 @@ class Host extends Component {
     addDummyUser(nickname) {
         const {gameId} = this.state;
         const gameRef = db.collection('Rooms').doc(gameId);
-        const userRef = gameRef.collection('users').doc('dummy user');
+        const userRef = gameRef.collection('users').doc(nickname);
 
         const gameInfo = {
             nickname: nickname,
@@ -140,12 +142,31 @@ class Host extends Component {
                             })
                         });
                     });
+                    gameRef.update({
+                        phase: 'connection',
+                    })
                 } else {
                     console.log("wrong password");
                 }
             } else {
                 console.log("room " + gameId + " does not exist");
             }
+        });
+    }
+
+    startGame() {
+        const that = this;
+        that.updatePhase('question');
+    }
+
+    advanceQuestion() {
+        const {gameId} = this.state;
+        const that = this;
+        this.setState({
+            questionNum: that.state.questionNum + 1,
+        });
+        db.collection('Rooms').doc(gameId).update({
+            date_index: that.state.questionNum,
         });
     }
 
@@ -159,7 +180,7 @@ class Host extends Component {
     - ended : the game has ended
      */
     render() {
-        const {gameId, password, phase, authenticated, users} = this.state;
+        const {gameId, password, phase, authenticated, users, questionNum} = this.state;
         const gameFunctions = {
             update: this.updateGame,
             restart: this.restartGame,
@@ -192,6 +213,23 @@ class Host extends Component {
                             ))
                             }
                         </ul>
+                        <button onClick={() => this.startGame()}>start stonks game</button>
+                    </div>
+                )
+            } else if (phase === 'question') {
+                return (
+                    <div className="page-container host-page">
+                        <span>Current question: </span>
+                        {' '}
+                        <span className="dynamic-text">{questionNum}</span>
+                        <p> Users List </p>
+                        <ul id="user-list">
+                            {users.map(user => (
+                                <li>{user.nickname}</li>
+                            ))
+                            }
+                        </ul>
+                        <button onClick={() => this.advanceQuestion()}>next question</button>
                     </div>
                 )
             }

@@ -1,5 +1,5 @@
 import React, {Component,Fragment} from 'react';
-import {fire} from '../../firebase.js';
+import {db,fire} from '../../firebase.js';
 import {Quiz} from '../quiz/play/Quiz.jsx';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
@@ -13,39 +13,37 @@ function fetchGame(gameId,callback) {
 
 class Play extends Component {
 
+    /*
+    Possible phases:
+    - not-joined : display joining game
+    - connection : players joining phase
+    - question : displaying questions phase
+    - between-question : display a page between questions
+    - leaderboards : display the winners at the end
+    - ended : the game has ended
+     */
+
     constructor (props) {
         super(props);
         this.state = {
             game: {},
-            gameId: '',
-            gametype: 'other',
-            recentGameId: localStorage.getItem('RecentGameIdPlay') || '',
-            playerKey: '',
-            chartURLs: null,
-            technicalIndicators: null,
-            currentCash: null,
-            currentShares: null,
+            gameId: null,
+            password: '',
+            phase: 'not-joined',
+            userId: '',
+            questionNum: 0,
+            chartURLs: [],
+            technicalIndicators: [],
+            currentCash: 0,
+            currentShares: [],
             currentPrice: null,
         };
-        this.createPlayer = this.createPlayer.bind(this);
+        this.addUser = this.addUser.bind(this);
         this.joinGame = this.joinGame.bind(this);
+        this.initGameListener = this.initGameListener.bind(this);
     }
 
     componentDidMount() {
-        const {recentGameId} = this.state;
-        if (recentGameId) {
-            fetchGame('default',recentGameId, (snapshot) => {
-                if (snapshot.val()) {
-                    var game;
-                    snapshot.forEach((child) => {
-                        game = child.val();
-                    });
-                    if (game.status === 'in_progress') {
-                        this.setState({recentGame:game});
-                    }
-                }
-            })
-        }
     }
 
     handleChangeSelect = (event) => {
@@ -58,98 +56,117 @@ class Play extends Component {
         });
     };
 
-    updateShares(changeInShares,playerId) {
-        var current
+    initGameListener() {
+        const that = this;
+        const {questionNum,gameId} = this.state;
+        const gameRef = db.collection('Rooms').doc(gameId);
+        gameRef.onSnapshot(function(gameData) {
+            const curQuestionNum = gameData.data().date_index;
+            const curPhase = gameData.data().phase;
+            if(questionNum != curQuestionNum) {
+                that.setState({
+                    questionNum: curQuestionNum,
+                });
+            }
+            that.setState({
+                phase: curPhase,
+            })
+        });
     }
 
-    joinGame(gameId) {
-        const {gametype} = this.state;
+    joinGame() {
+        const {gameId,password} = this.state;
         const that = this;
-        fetchGame(gametype, gameId, (snapshot) => {
-            if (snapshot.val()) {
-                var game;
-                snapshot.forEach((child) => {
-                    game = child.val();
-                });
-                if (game.phase === 'connection') {
-                    const storedPlayerKey = localStorage.getItem('RecentPlayerKey');
-                    if (storedPlayerKey && game.players && game.players[storedPlayerKey]) {
-                        that.setState({playerKey: storedPlayerKey});
-                    }
-                    that.initGameListener(game);
-                } else if (game.phase === 'setup') {
-                    //game not started
+        const gameRef = db.collection('Rooms').doc(gameId);
+        gameRef.get().then(function(gameData) {
+            if (gameData.exists) {
+                var gameInfo = gameData.data();
+                if (gameInfo.password === password && gameInfo.phase === 'connection') {
+                    that.setState({
+                        phase: 'connection',
+                    });
+                    var uniqueUserId = '1234567';
+                    that.addUser("actual user",uniqueUserId);
+                    that.setState({
+                        userId: uniqueUserId,
+                    });
+                    that.initGameListener();
+                    //create event listener
+                    //that.initGameListener();
+
+                } else if (gameInfo.password === password) {
+                    console.log("game not being hosted yet");
+                } else if (gameInfo.phase === 'connection') {
+                    console.log("incorrect password");
                 } else {
-                    const storedPlayerKey = localStorage.getItem('RecentPlayerKey');
-                    if (storedPlayerKey && game.players && game.players[storedPlayerKey]) {
-                        that.setState({playerkey: storedPlayerKey});
-                        localStorage.setItem('RecentGameIdPlay',game.gameId);
-                        that.initGameListener(game);
-                    } else {
-                        //game in progress
-                    }
+                    console.log("game does not exist");
                 }
             } else {
-                //no game found
+                console.log("room " + gameId + " does not exist");
             }
         });
     }
 
-    initGameListener(gameParameter) {
-        var gameRef;
-        gameRef = fire.database().ref('/Rooms/$(gameParameter.key)');
-        const that = this;
-        gameRef.on('value', (snapshot) => {
-            const game = snapshot.val();
-            if (game) {
-                that.setState({
-                    game,
-                });
-            } else {
-                that.setState({
-                    game: '',
-                })
-            }
-        });
-    }
+    addUser(nickname,uniqueId) {
+        var nickname = "singled out user"
+        const {gameId} = this.state;
+        const gameRef = db.collection('Rooms').doc(gameId);
+        const userRef = gameRef.collection('users').doc(uniqueId);
 
-    createPlayer(player) {
-        const {game} = this.state;
-        var playerRef;
-        playerRef = fire.database().ref('/Rooms/$(game.key}/players').push();
-        const newPlayer = Object.assign({key:playerRef.key},player);
-        const that = this;
-        playerRef.set(newPlayer, (error) => {
-            if (error) {
-                //handle error
-            } else {
-                that.setState({
-                    playerKey: newPlayer.key,
-                });
-                localStorage.setItem('RecentPlayerKey',newPlayer.key);
-            }
-        });
+        const gameInfo = {
+            nickname: nickname,
+            investments: [],
+            personal_value: 10000,
+            money_left: 10000,
+            gains: 0,
+            losses: 0,
+        }
+
+        this.setState({
+            net_worth: gameInfo.personal_value,
+            cash: gameInfo.money_left,
+        })
+
+        userRef.set(gameInfo);
     }
 
     render () {
-        const {game,playerKey,gameId,recentGameId,recentGame,isRedirected,gametype} = this.state;
-        if (!game.phase) {
+        const {game,phase,password,playerKey,questionNum,gameId,recentGameId,recentGame,isRedirected,gametype} = this.state;
+        if (phase === 'not-joined') {
             return (
                 <div className="page-container play-page">
                     <div>
                         <FormControl>
                             <TextField label="Game PIN" name="Game ID" value={gameId} onChange={this.handleChange('gameId')}/>
                         </FormControl>
-                        <Button onClick={() => this.joinGame(gameId)} variant="contained">Join</Button>
+                        <FormControl>
+                            <TextField label="Password" type="password" name="password" value={password}
+                                       onChange={this.handleChange('password')}/>
+                        </FormControl>
+                        <Button onClick={() => this.joinGame()} variant="contained">Join</Button>
                     </div>
                 </div>
             )
+        } else if (phase === 'connection') {
+            return (
+                <div>
+                    <p> Connected. Please wait for host to start game. </p>
+                </div>
+            )
+        } else if (phase === 'question') {
+            return (
+                <div>
+                    <span>Current question: </span>
+                    {' '}
+                    <span className="dynamic-text">{questionNum}</span>
+                    <p> (question info will be displayed here) </p>
+                    <button> Buy </button>
+                    <button> Sell </button>
+                    <button> Hold </button>
+                </div>
+            )
         }
-        return (
-            <div className="page-container play-page">
-                {game.gametype === 'quiz' && <Quiz game={game} createPlayer={this.createPlayer} playerKey={playerKey}/>}
-            </div>
-        );
+
     }
 }
 
