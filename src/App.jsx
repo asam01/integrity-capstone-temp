@@ -6,8 +6,7 @@ import Host from './Components/pages/Host'
 import Play from './Components/pages/Play'
 import Home from './Components/pages/Home'
 
-import UserProvider from "./Components/authenticate/providers/UserProvider";
-import Game from "./Components/Game";
+import UserProvider from './Components/authenticate/providers/UserProvider.jsx';
 
 class App extends Component {
   constructor(props) {

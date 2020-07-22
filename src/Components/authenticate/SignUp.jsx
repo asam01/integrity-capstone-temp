@@ -27,7 +27,6 @@ const SignUp = () => {
           </label>
           <input
             type="text"
-            className="my-1 p-1 w-full "
             name="displayName"
             value={displayName}
             placeholder="My Name"
@@ -38,7 +37,7 @@ const SignUp = () => {
         <button onClick={() => {signInWithGoogle();}}>
           Sign In with Google
         </button>
-        <p className="text-center my-3">
+        <p>
           Already have an account?{" "}
           <Link to="/auth/signIn"> Sign in here </Link>
         </p>

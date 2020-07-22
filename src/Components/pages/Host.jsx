@@ -9,16 +9,29 @@ function fetchGame(gameId, callback) {
     return fire.database().ref('/Rooms').orderByChild('gameId').equalTo(gameId).once('value',callback);
 }
 
+/*
+Possible phases:
+- not-joined : display joining game
+- connection : players joining phase
+- question : displaying questions phase
+- between-question : display a page between questions
+- leaderboards : display the winners at the end
+- ended : the game has ended
+ */
+
+/*
+Game structure:
+- phase: (see above)
+- starting_money: contains starting value for users
+- day_index: which date is used
+- password: password
+- symbols: array of symbols
+* User collection
+
+ */
+
 class Host extends Component {
-    /*
-    Possible phases:
-    - not-joined : display joining game
-    - connection : players joining phase
-    - question : displaying questions phase
-    - between-question : display a page between questions
-    - leaderboards : display the winners at the end
-    - ended : the game has ended
-     */
+
     constructor(props) {
         super(props);
         this.state = {
@@ -30,6 +43,8 @@ class Host extends Component {
             listening: 'no',
             users: [],
         }
+        this.userExists = this.userExists.bind(this);
+        this.updateUsers = this.updateUsers.bind(this);
         this.joinGame = this.joinGame.bind(this);
         this.updatePhase = this.updatePhase.bind(this);
         this.initGameListener = this.initGameListener.bind(this);
@@ -53,6 +68,13 @@ class Host extends Component {
         this.setState({
             [name]:event.target.value,
         });
+    }
+
+    userExists(userId) {
+        this.state.users.array.forEach(function(item,index) {
+            if (item.id == userId) return true;
+        });
+        return false;
     }
 
     updatePhase(gameupdate) {
@@ -91,29 +113,23 @@ class Host extends Component {
             gains: 0,
             losses: 0,
         }
-
         userRef.set(gameInfo);
     }
 
-    initGameListener() {
-        var gameRef;
-        gameRef = db.collection('Rooms').doc(this.state.gameId);
+    updateUsers() {
+        const {password,gameId} = this.state;
         const that = this;
-
-        gameRef.on('value',(snapshot) => {
-            const game = snapshot.val();
-            if (!game.phase) {
-                game.phase = 'setup';
-            }
-            if (game) {
-                that.setState({
-                    game,
-                });
-            } else {
-                that.setState({
-                    game: '',
-                });
-            }
+        var gameRef = db.collection('Rooms').doc(gameId);
+        gameRef.collection('users').get().then((snapshot) => {
+            snapshot.docs.forEach(user => {
+                if (!that.userExists(user.id)) {
+                    console.log("adding new user");
+                    var newUser = user.data();
+                    that.setState({
+                        users: that.state.users.concat([newUser]),
+                    })
+                }
+            });
         });
     }
 
@@ -124,24 +140,15 @@ class Host extends Component {
         gameRef.get().then(function(gameData) {
             if (gameData.exists) {
                 var gameInfo = gameData.data();
-                if (gameInfo.password === password) {
+                if (gameInfo.password === password && gameInfo.phase === 'no-host') {
                     that.setState({
                         authenticated: 'yes',
                         phase: 'connection',
                     });
-                    //create event listener
-                    that.addDummyUser('test1');
-                    that.addDummyUser('yoda');
-                    that.addDummyUser('yoda2');
-                    //that.initGameListener();
-                    gameRef.collection('users').get().then((snapshot) => {
-                        snapshot.docs.forEach(user => {
-                            var newUser = user.data();
-                            that.setState({
-                                users: that.state.users.concat([newUser]),
-                            })
-                        });
-                    });
+
+                    that.addDummyUser('dummy user');
+                    that.updateUsers();
+                    that.initGameListener();
                     gameRef.update({
                         phase: 'connection',
                     })
@@ -151,6 +158,16 @@ class Host extends Component {
             } else {
                 console.log("room " + gameId + " does not exist");
             }
+        });
+    }
+
+    initGameListener() {
+        const {gameId} = this.state;
+        var gameRef = db.collection('Rooms').doc(gameId);
+        const that = this;
+
+        gameRef.onSnapshot(function(gameData) {
+            that.updateUsers();
         });
     }
 
@@ -225,7 +242,7 @@ class Host extends Component {
                         <p> Users List </p>
                         <ul id="user-list">
                             {users.map(user => (
-                                <li>{user.nickname}</li>
+                                <li key={user.id}>{user.nickname}</li>
                             ))
                             }
                         </ul>

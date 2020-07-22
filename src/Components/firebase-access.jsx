@@ -1,15 +1,41 @@
 import firebase from "firebase/app";
 import "firebase/auth";
 import "firebase/firestore";
+import {db} from "../firebase";
 
 const STARTING_MONEY = 10000;
 
-export const setUpRoom = (db,NumOfSymbols,Rounds,userID,password) => {
+export const addUser = (starting_money,gameId,nickname,numDays,numSymbols) => {
+    const {gameId,nickname} = this.state;
+    const gameRef = db.collection('Rooms').doc(gameId);
+    const userRef = gameRef.collection('users').doc();
+    const userId = userRef.id;
+    const empArray = Array.from(Array(numSymbols),()=>0);
+
+    const gameInfo = {
+        nickname: nickname,
+        net_worth: starting_money,
+        money_left: starting_money,
+        curShares: empArray,
+    }
+    userRef.set(gameInfo);
+
+    for(var i_day = 0; i_day < numDays; i_day++) {
+        var newDoc = userRef.collection('investments').doc(i_day);
+        newDoc.set({
+            change: empArray,
+        });
+    }
+    return userId;
+}
+
+export const setUpRoom = (NumOfSymbols,Rounds,userID,password) => {
     const roomRef = db.collection('Rooms').doc();
     roomRef.set({
         day_index: 0,
         phase: 'no-host',
         password: password,
+        starting_money: STARTING_MONEY,
     });
     const roomID = roomRef.id;
     initSymbols(db,null,null,NumOfSymbols).then((symbolsL) => {
@@ -19,25 +45,13 @@ export const setUpRoom = (db,NumOfSymbols,Rounds,userID,password) => {
                 dates: datesD["dates"],
             });
             initializeQuiz(symbolsL,roomID,datesD["period"],datesD["dates"]);
+
         });
     });
-
-    // const usersRef = roomRef.collection('users');
-    // const userRef = usersRef.doc(userID);
-    // console.log("SetUp room was called")
-
-    // const gameInfo = {
-    //     investments: [],
-    //     personal_value: STARTING_MONEY,
-    //     money_left: STARTING_MONEY,
-    //     gains: 0,
-    //     losses: 0,
-    // }
-    // await fetch(userRef.set(gameInfo));
     return roomID;
 }
 
-export const getUserShares = async (db, roomID, userID) => {
+export const getUserShares = async (roomID, userID) => {
     const userRef = db.collection('Rooms').doc(roomID)
         .collection('users').doc(userID);
     const userDoc = await userRef.get();
@@ -45,24 +59,18 @@ export const getUserShares = async (db, roomID, userID) => {
     return userData.investments;
 }
 
-export const getUserBalance = async (db, roomID, userID) => {
-    const userRef = db.collection('Rooms').doc(roomID)
-        .collection('users').doc(userID);
-
-    const userDoc = await userRef.get();
-    const userData = userDoc.data();
+export const getUserCash = async (roomID, userID) => {
+    const userData = await db.collection('Rooms').doc(roomID).collection('users').doc(userID).get().data();
     return userData.money_left;
 }
 
-export const getChartUrl = async (db,roomId,symbol,endDate) =>{
-    let images = await db.collection('Rooms').doc(roomId).collection(symbol).doc('images').get();
-    let imagesData = images.data();
-    return imagesData["Stockpublic_image_url"][endDate]
+export const getChartUrl = async (roomId,symbol,endDate) =>{
+    let imagesData = await db.collection('Rooms').doc(roomId).collection(symbol).doc('images').get().data();
+    return imagesData["Stockpublic_image_url"][endDate];
 }
 
-export const getTechnicalUrl = async (db, roomId, symbol, endDate) => {
-    let images = await db.collection('Rooms').doc(roomId).collection(symbol).doc('images').get();
-    let imagesData = images.data();
+export const getTechnicalUrl = async (roomId, symbol, endDate) => {
+    let imagesData = await db.collection('Rooms').doc(roomId).collection(symbol).doc('images').get().data();
     return imagesData["Stockpublic_image_url"][endDate]
 }
 
@@ -72,7 +80,7 @@ function randomDate(start, end) {
 }
 
 // Minimum Period is 1Month
-export const initDates = async (db, symbols, Rounds) => {
+export const initDates = async (symbols, Rounds) => {
     let Stocks= await db.collection("Ticker-Info").doc("Stock").collection("Stocks")
         .where("Symbol","in",symbols).get()
     let IPOyearMax = 0;
@@ -105,7 +113,7 @@ export const initDates = async (db, symbols, Rounds) => {
     return datesD
 }
 
-export const initSymbols = async(db,Industry,Sector,NumOfSymbols) =>{
+export const initSymbols = async(Industry,Sector,NumOfSymbols) =>{
     let symbols = []
     if(Sector !== null && Industry !== null){
 
@@ -203,36 +211,37 @@ export const initializeQuiz = async (symbols, roomId, periodLen, endDates) => {
     }
 }
 
-export const getSymbols = async (db,roomID) =>{
-    const symbol = await db.collection('Rooms').doc(roomID).get();
-    const symbolData = await symbol.data();
+export const getSymbols = async (roomID) =>{
+    const symbolData = await db.collection('Rooms').doc(roomID).get().data();
     return symbolData.symbols;
 }
 
-export const getDate = async (db, roomID) => {
-    const roomDoc = await db.collection('Rooms').doc(roomID).get();
-    const roomData = roomDoc.data();
+export const getDate = async (roomID) => {
+    const roomData = await db.collection('Rooms').doc(roomID).get().data();
     return roomData.dates[roomData.day_index];
 }
 
+// returns current price for all symbols being tracked
+export const getPrices = async (roomID, dayIndex) => {
+    const roomDoc = await db.collection('Rooms').doc(roomID).get();
+    const roomData = roomDoc.data();
+    const symbolNamesArray = roomData.symbols;
 
-export const getCurrentPrice = async (db,symbol,roomID) => {
-    try {
-        const Price = await db.collection('Rooms').doc(roomID).collection(symbol).doc('Prices').get();
-        const priceData = Price.data();
-        try {
-            const data = await db.collection('Rooms').doc(roomID).get()
-            const roomData = data.data();
-            return priceData.prices[roomData.day_index];
-        } catch(error) {
-            console.log("Error is " +  error)
-        }
-    } catch(error){
-        console.log("Error is " +  error)
+    var prices = [];
+
+    // save all current prices in an array
+    for (var index = 0; index < symbolNamesArray.length; index++) {
+        const currentName = symbolNamesArray[index];
+        const symbolPricesDoc = await db.collection('Rooms').doc(roomID).collection(currentName).doc('Prices').get();
+        const symbolPricesData = symbolPricesDoc.data();
+        const currentPrice = symbolPricesData.prices[dayIndex];
+        prices.push(currentPrice);
     }
+
+    return prices;
 }
 
-export const advanceDay = async (db, roomID) => {
+export const advanceDay = async (roomID) => {
     const roomRef = await db.collection('Rooms').doc(roomID);
     const data = await roomRef.get();
     const roomData = data.data();
@@ -240,30 +249,107 @@ export const advanceDay = async (db, roomID) => {
         roomRef.update({
             day_index: firebase.firestore.FieldValue.increment(1)
         });
-        return 1
+        return 1;
     }
     else{
         return 0;
     }
 }
 
-export const makeInvestment = (db, roomID, userID, symbol, price, num_shares) => {
+export const verifyOk = async (roomID, userID, dayIndex, changeArray, prices) => {
 
-    const invJSON = {
-        "symbol": symbol,
-        "share_price": price,
-        "num_shares": num_shares,
-        "total_purchase_price": (price * num_shares)
-    }
+    var consistentInvestment = true;
+    const userRef = db.collection('Rooms').doc(roomID).collection('users').doc(userID);
+    await userRef.get().then(function(userDoc) {
+        if (userDoc.exists) {
+            //first check shares are consistent
+            var userData = userDoc.data();
+            var curArray = userData.curShares;
+            var sum = curArray.map(function(num,idx) {
+                return num + changeArray[idx];
+            });
+            consistentInvestment = consistentInvestment && sum.every((e) => e>=0);
 
-    const userRef = db.collection('Rooms').doc(roomID)
-        .collection('users').doc(userID);
-
-    const moneySpent = (price * num_shares) * -1;
-
-    // add investment and update money_left
-    userRef.update({
-        investments: firebase.firestore.FieldValue.arrayUnion(invJSON),
-        money_left: firebase.firestore.FieldValue.increment(moneySpent)
+            //check cash ok
+            var totalMoney = userData.money_left;
+            var moneySpentArr = prices.map(function(price,idx) {
+                totalMoney -= price * changeArray[idx];
+                return price * changeArray[idx];
+            });
+            consistentInvestment = consistentInvestment && totalMoney >= 0;
+        }
     });
+
+    return consistentInvestment;
+}
+
+
+export const changeCash = async (roomID, userID, dayIndex, changeArray, prices) => {
+    const userRef = db.collection('Rooms').doc(roomID).collection('users').doc(userID);
+    const investRef = userRef.collection('investments').doc(dayIndex);
+
+    userRef.get().then(function(userDoc) {
+        if (userDoc.exists) {
+            var userData = userDoc.data();
+            var totalMoney = userData.money_left;
+            prices.map(function(num,idx) {
+                totalMoney -= num * changeArray[idx];
+            });
+            userRef.update({
+                money_left: totalMoney,
+            });
+        }
+    });
+}
+
+export const changeShares = async (roomID, userID, dayIndex, changeArray) => {
+    const userRef = db.collection('Rooms').doc(roomID).collection('users').doc(userID);
+    const investRef = userRef.collection('investments').doc(dayIndex);
+
+    //update curShares array
+    userRef.get().then(function(userDoc) {
+        if (userDoc.exists) {
+            var userData = userDoc.data();
+            var curArray = userData.curShares;
+            var sum = curArray.map(function(num,idx) {
+                return num + changeArray[idx];
+            });
+            userRef.update({
+                curShares: sum,
+            })
+        }
+    })
+
+    //update
+    //TODO: current have a separate call for investment. Consider accessing it through userData to save time
+    investRef.get().then(function(investDoc) {
+        if (investDoc.exists) {
+            var investData = investDoc.data();
+            var curArray = investData.change;
+            var sum = curArray.map(function(num,idx) {
+                return num + changeArray[idx];
+            });
+            investRef.update({
+                change: sum,
+            });
+        }
+    });
+}
+
+export const makeInvestment = async (roomID, userID, dayIndex, changeArray) => {
+    const prices = await getPrices(roomID, dayIndex);
+
+    if (!(await verifyOk(roomID,userID,dayIndex,changeArray,prices))) return false;
+
+    changeCash(roomID,userID,dayIndex,changeArray,prices);
+    changeShares(roomID,userID,dayIndex,changeArray);
+
+    return true;
+}
+
+// retrieves symbol name given the symbol's index
+export const getSymbolNameFromIndex = async (db, roomID, symbolIndex) => {
+    const roomDoc = await db.collection('Rooms').doc(roomID).get();
+    const symbols = roomDoc.data().symbols;
+    return symbols[symbolIndex];
 }

@@ -19,9 +19,19 @@ const auth = firebase.auth();
 const firestore = firebase.firestore();
 const db = firebase.firestore();
 
+
 const provider = new firebase.auth.GoogleAuthProvider();
 const signInWithGoogle = () => {
   auth.signInWithPopup(provider);
 };
 
 export {db, fire, auth, firestore, signInWithGoogle};
+
+export const getUserID = () =>{
+  var user = firebase.auth().currentUser;
+  if (user != null) {
+    return user.uid;
+  } else {
+    throw "Null User"
+  }
+};

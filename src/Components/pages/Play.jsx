@@ -30,6 +30,7 @@ class Play extends Component {
             gameId: null,
             password: '',
             phase: 'not-joined',
+            nickname: '',
             userId: '',
             questionNum: 0,
             chartURLs: [],
@@ -58,41 +59,42 @@ class Play extends Component {
 
     initGameListener() {
         const that = this;
-        const {questionNum,gameId} = this.state;
+        const {questionNum,gameId,phase,nickname} = this.state;
         const gameRef = db.collection('Rooms').doc(gameId);
         gameRef.onSnapshot(function(gameData) {
-            const curQuestionNum = gameData.data().date_index;
+            const curQuestionNum = gameData.data().day_index;
             const curPhase = gameData.data().phase;
-            if(questionNum != curQuestionNum) {
+            if (questionNum != curQuestionNum) {
                 that.setState({
-                    questionNum: curQuestionNum,
+                    questionNum: curQuestionNum + 1,
                 });
+                //TODO: fetch question data
             }
-            that.setState({
-                phase: curPhase,
-            })
+            if (phase !== curPhase) {
+                that.setState({
+                    phase: curPhase,
+                });
+
+            }
         });
     }
 
     joinGame() {
-        const {gameId,password} = this.state;
+        const {gameId,password,nickname} = this.state;
         const that = this;
         const gameRef = db.collection('Rooms').doc(gameId);
         gameRef.get().then(function(gameData) {
             if (gameData.exists) {
                 var gameInfo = gameData.data();
                 if (gameInfo.password === password && gameInfo.phase === 'connection') {
+                    var uniqueUserId = that.addUser(nickname,gameInfo.starting_money);
                     that.setState({
                         phase: 'connection',
-                    });
-                    var uniqueUserId = '1234567';
-                    that.addUser("actual user",uniqueUserId);
-                    that.setState({
                         userId: uniqueUserId,
+                        net_worth: gameInfo.starting_money,
+                        cash: gameInfo.starting_money,
                     });
                     that.initGameListener();
-                    //create event listener
-                    //that.initGameListener();
 
                 } else if (gameInfo.password === password) {
                     console.log("game not being hosted yet");
@@ -107,35 +109,36 @@ class Play extends Component {
         });
     }
 
-    addUser(nickname,uniqueId) {
-        var nickname = "singled out user"
-        const {gameId} = this.state;
+    addUser(starting_money) {
+        const {gameId,nickname} = this.state;
         const gameRef = db.collection('Rooms').doc(gameId);
-        const userRef = gameRef.collection('users').doc(uniqueId);
+        const userRef = gameRef.collection('users').doc();
+        const userId = userRef.id;
 
         const gameInfo = {
             nickname: nickname,
             investments: [],
-            personal_value: 10000,
-            money_left: 10000,
+            personal_value: starting_money,
+            money_left: starting_money,
             gains: 0,
             losses: 0,
         }
 
-        this.setState({
-            net_worth: gameInfo.personal_value,
-            cash: gameInfo.money_left,
-        })
-
         userRef.set(gameInfo);
+        return userId;
     }
 
     render () {
-        const {game,phase,password,playerKey,questionNum,gameId,recentGameId,recentGame,isRedirected,gametype} = this.state;
+        const {game,phase,password,nickname,playerKey,questionNum,gameId,recentGameId,recentGame,isRedirected,gametype} = this.state;
+        console.log(questionNum);
         if (phase === 'not-joined') {
             return (
                 <div className="page-container play-page">
                     <div>
+                        <FormControl>
+                            <TextField label="Nickname" name="nickname" value={nickname}
+                                       onChange={this.handleChange('nickname')}/>
+                        </FormControl>
                         <FormControl>
                             <TextField label="Game PIN" name="Game ID" value={gameId} onChange={this.handleChange('gameId')}/>
                         </FormControl>

@@ -1,4 +1,31 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "Stocks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "industry",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "Sector",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "MarketCap",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "IPOyear",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "RandomPos",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }
