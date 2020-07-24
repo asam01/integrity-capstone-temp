@@ -3,11 +3,8 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import FormControl from '@material-ui/core/FormControl';
 import {Quiz} from '../quiz/host/Quiz.js';
-import {db,fire} from '../../firebase.js';
-
-function fetchGame(gameId, callback) {
-    return fire.database().ref('/Rooms').orderByChild('gameId').equalTo(gameId).once('value',callback);
-}
+import {db,fire,fval} from '../../firebase.js';
+import {addUser,getUserData,getUserRef,getRoomData,getRoomRef,getNumDays} from '../firebase-access.jsx';
 
 /*
 Possible phases:
@@ -37,7 +34,7 @@ class Host extends Component {
         this.state = {
             phase: 'not-joined',
             questionNum: 0,
-            gameId: null,
+            roomId: null,
             password: '',
             authenticated: 'no',
             listening: 'no',
@@ -51,10 +48,15 @@ class Host extends Component {
         this.restartGame = this.restartGame.bind(this);
         this.quitGame = this.quitGame.bind(this);
         this.endGame = this.endGame.bind(this);
+        this.debug = this.debug.bind(this);
+    }
+
+    debug(str) {
+        console.log(str);
     }
 
     componentDidMount() {
-        const {gameId} = this.state;
+        const {roomId} = this.state;
     }
 
     componentDidChange() {
@@ -71,18 +73,28 @@ class Host extends Component {
     }
 
     userExists(userId) {
-        this.state.users.array.forEach(function(item,index) {
-            if (item.id == userId) return true;
+        const {users} = this.state;
+        var exists = false;
+        console.log("type of users: " + typeof(users));
+        Array.from(users).forEach(function(item) {
+            console.log("item ID " + item.userId);
+            console.log("checked user ID " + userId);
+            if (item.userId == userId) {
+                console.log("they are equal");
+                exists = true;
+            } else {
+                console.log(item.userId + " and " + userId + " are not equal");
+            }
         });
-        return false;
+        return exists;
     }
 
     updatePhase(gameupdate) {
-        const {gameId} = this.state;
+        const {roomId} = this.state;
         this.setState({
             phase: gameupdate,
-        })
-        db.collection('Rooms').doc(gameId).update({
+        });
+        db.collection('Rooms').doc(roomId).update({
             phase: gameupdate,
         });
     }
@@ -100,73 +112,82 @@ class Host extends Component {
         this.updateGame({phase:'final_result'});
     }
 
-    addDummyUser(nickname) {
-        const {gameId} = this.state;
-        const gameRef = db.collection('Rooms').doc(gameId);
-        const userRef = gameRef.collection('users').doc(nickname);
-
-        const gameInfo = {
-            nickname: nickname,
-            investments: [],
-            personal_value: -1,
-            money_left: -1,
-            gains: 0,
-            losses: 0,
-        }
-        userRef.set(gameInfo);
-    }
+    // addDummyUser(nickname) {
+    //     const {gameId} = this.state;
+    //     const gameRef = db.collection('Rooms').doc(gameId);
+    //     const userRef = gameRef.collection('users').doc(nickname);
+    //
+    //     const gameInfo = {
+    //         nickname: nickname,
+    //         investments: [],
+    //         personal_value: -1,
+    //         money_left: -1,
+    //         gains: 0,
+    //         losses: 0,
+    //     }
+    //     userRef.set(gameInfo);
+    // }
 
     updateUsers() {
-        const {password,gameId} = this.state;
+        const {password,roomId} = this.state;
         const that = this;
-        var gameRef = db.collection('Rooms').doc(gameId);
-        gameRef.collection('users').get().then((snapshot) => {
+        var roomRef = db.collection('Rooms').doc(roomId);
+        roomRef.collection('users').get().then((snapshot) => {
             snapshot.docs.forEach(user => {
-                if (!that.userExists(user.id)) {
+                var userData = user.data();
+                const userExistsBool = that.userExists(userData.userId);
+                console.log("userExistsBool value is " + userExistsBool);
+                if (userExistsBool == false) {
                     console.log("adding new user");
-                    var newUser = user.data();
+                    console.log("user id is " + userData.userId);
                     that.setState({
-                        users: that.state.users.concat([newUser]),
+                        users: that.state.users.concat([userData]),
                     })
                 }
             });
         });
     }
 
-    joinGame() {
-        const {password,gameId} = this.state;
+    async joinGame() {
+        const {password,roomId} = this.state;
         const that = this;
-        var gameRef = db.collection('Rooms').doc(gameId);
-        gameRef.get().then(function(gameData) {
-            if (gameData.exists) {
-                var gameInfo = gameData.data();
-                if (gameInfo.password === password && gameInfo.phase === 'no-host') {
-                    that.setState({
-                        authenticated: 'yes',
-                        phase: 'connection',
-                    });
-
-                    that.addDummyUser('dummy user');
-                    that.updateUsers();
-                    that.initGameListener();
-                    gameRef.update({
-                        phase: 'connection',
-                    })
-                } else {
-                    console.log("wrong password");
-                }
+        var roomRef = getRoomRef(roomId);
+        var roomData = await getRoomData(roomId);
+        if (roomData != null) {
+            console.log(roomData);
+            if (roomData.password === password && roomData.phase === 'no-host') {
+                that.setState({
+                    authenticated: 'yes',
+                    phase: 'connection',
+                });
+                that.debug("ckpoint 1 host");
+                await addUser(roomId,"dummy user");
+                that.debug("ckpoint 2 host");
+                await that.updateUsers();
+                that.debug("ckpoint 3 host");
+                await that.initGameListener();
+                that.debug("ckpoint 4 host");
+                roomRef.update({
+                    phase: 'connection',
+                });
+                var numDays = getNumDays(roomId);
+                that.setState({
+                    numDays: numDays,
+                })
             } else {
-                console.log("room " + gameId + " does not exist");
+                console.log("wrong password");
             }
-        });
+        } else {
+            console.log("room " + roomId + " does not exist");
+        }
     }
 
     initGameListener() {
-        const {gameId} = this.state;
-        var gameRef = db.collection('Rooms').doc(gameId);
+        const {roomId} = this.state;
+        var roomRef = db.collection('Rooms').doc(roomId);
         const that = this;
 
-        gameRef.onSnapshot(function(gameData) {
+        roomRef.collection('users').onSnapshot(function(roomData) {
             that.updateUsers();
         });
     }
@@ -177,14 +198,15 @@ class Host extends Component {
     }
 
     advanceQuestion() {
-        const {gameId} = this.state;
+        const {roomId} = this.state;
         const that = this;
         this.setState({
             questionNum: that.state.questionNum + 1,
         });
-        db.collection('Rooms').doc(gameId).update({
-            date_index: that.state.questionNum,
+        db.collection('Rooms').doc(roomId).update({
+            day_index: fval.increment(1),
         });
+
     }
 
     /*
@@ -197,7 +219,7 @@ class Host extends Component {
     - ended : the game has ended
      */
     render() {
-        const {gameId, password, phase, authenticated, users, questionNum} = this.state;
+        const {roomId, password, phase, authenticated, users, questionNum} = this.state;
         const gameFunctions = {
             update: this.updateGame,
             restart: this.restartGame,
@@ -209,8 +231,8 @@ class Host extends Component {
             return (
                 <div className="page-container host-page">
                     <FormControl>
-                        <TextField label="Game PIN" name="Game ID" value={gameId}
-                                   onChange={this.handleChange('gameId')}/>
+                        <TextField label="Game PIN" name="Game ID" value={roomId}
+                                   onChange={this.handleChange('roomId')}/>
                     </FormControl>
                     <FormControl>
                         <TextField label="Password" type="password" name="password" value={password}

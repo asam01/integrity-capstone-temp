@@ -4,6 +4,8 @@ import pandas as pd
 from datetime import date,datetime
 from dateutil.relativedelta import relativedelta
 import os
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 '''
@@ -15,6 +17,7 @@ end-date- The last date of the period in format 2017-08-10 00:00:00 (Naming Purp
 Returns
 Nothing.Saves Image of stock data as well as the the EMA and SMA values in line plot form
 '''
+
 def getStockImage(data,symbol,roomID,end_date):
     OpenLi = data[['Close']]
     SMA50 = IntrinsicValue.getSMAList(data,50)

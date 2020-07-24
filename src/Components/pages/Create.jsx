@@ -50,8 +50,9 @@ class Create extends Component {
     //         pagetype: 'created',
     //     });
     // }
+
     async createGameWrapper() {
-        var _gameId = await setUpRoom(db,1,3,null,'');
+        var _gameId = await setUpRoom(2,3,null,'');
         this.setState({
             pagetype: 'created',
             gameId: _gameId,
