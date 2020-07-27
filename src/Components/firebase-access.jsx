@@ -131,11 +131,14 @@ export const initSymbols = async(db,Industry,Sector,MarketCap,NumOfSymbols) =>{
       if(MarketCap)
           formData.append('MarketCap',MarketCap);
       formData.append('NumOfSymbols',NumOfSymbols);
+      var token =  localStorage.getItem('Token');
       try{
-          let response = await fetch('http://localhost:8080/get-symbols', {
+          let response = await fetch('https://us-central1-integrity-step-capstone.cloudfunctions.net/get_symbols ', {
               method: 'POST',
-              mode: 'cors',
-              body: formData
+              body: formData,
+              headers: {
+                Authorization: (' Bearer ' + token)
+              }
           })
           let symbolJson = await response.json();
           if (symbolJson.hasOwnProperty("Error")){
@@ -211,23 +214,29 @@ export const initializeQuiz = async (symbols, roomId, periodLen, endDates) => {
   formData.append('symbol',JSON.stringify(symbols));
   formData.append('RoomId',roomId);
   formData.append('end-date',JSON.stringify(endDates));
+  var token =  localStorage.getItem('Token');
   try{
-      await fetch('http://localhost:8080/get-prices', {
-          method: 'POST',
-          mode: 'cors',
-          body: formData
+      let response = await fetch("https://us-central1-integrity-step-capstone.cloudfunctions.net/test_fn", {
+        headers: {
+          Authorization: "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImI2M2VlMGJlMDkzZDliYzMxMmQ5NThjOTk2NmQyMWYwYzhmNmJiYmIiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiYXpwIjoiMzU5NTc4OTM1MTU4LWhtNjd1cWpwYnFsYXBydDRiZThmcXRsbGNic2FhZGljLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMzU5NTc4OTM1MTU4LWhtNjd1cWpwYnFsYXBydDRiZThmcXRsbGNic2FhZGljLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwic3ViIjoiMTEwMjEyMjU2ODI2NDc5NzAxMTE0IiwiaGQiOiJnb29nbGUuY29tIiwiZW1haWwiOiJqb2hua29uZ3RjaGV1QGdvb2dsZS5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYXRfaGFzaCI6ImMxVEtOajBrVUJPeWY2THpYM3BZY1EiLCJpYXQiOjE1OTU4NzE1NjAsImV4cCI6MTU5NTg3NTE2MH0.qFuwCVH3NkytZeCeAELTABnIZFqPDCZ33nGRBn9256Z510l5zVI7MxXJX2r2FFztp3N7NrZaBQuSYOpvYsVHE7qKvMpajuVRHgsvDAHp1s0riqqmOwMr9CePGX3Q72_EoAtH50-YF08Qp1LY3Oaid5_NOIl5yPMuMAx4N4d6gPcwP_fmuB9Us9ok5_tvyjOajCf6TQCTfDsGwzQ1WgZAWEbttLOMhnSu19tmKuywy7xVTlYv_tqEHBPRpfwKcUKn2sfjzvSKOaCSpSPZRtiR3_NLpJexxBOYnZZIQHRz0ame2_MXYLJgUsrJ_3xl_yKqC0g6wmyICxtU7K6abXRkQg"
+        },
+        credentials: 'include'
       })
+      console.log(await response.json());
   }
   catch(err) {
       console.log("Error is " +  err)
   }
   formData.append('periodLen',periodLen)
   try{
-      await fetch('http://localhost:8080/get-stock-image', {
+      let response  = await fetch('https://us-central1-integrity-step-capstone.cloudfunctions.net/get_stock_image', {
           method: 'POST',
-          mode: 'cors',
-          body: formData
+          body: formData,
+          headers: {
+            Authorization: (' Bearer ' + token)
+          }
       })
+      console.log(await response.json());
   }
   catch(error){
       console.log("Error is " +  error)

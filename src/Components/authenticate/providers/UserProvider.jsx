@@ -14,7 +14,6 @@ class UserProvider extends Component {
       // it won't cause a rerender.
       var event = document.createEvent("Event");
       event.initEvent("storage", true, true);
-
       if(userAuth == null){
         localStorage.setItem('User', 'N/A');
         window.dispatchEvent(event);
