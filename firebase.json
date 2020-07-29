@@ -1,0 +1,27 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": "build",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [ {
+     "source": "/test_cors",
+     "function": "test_cors"
+    },
+    {
+     "source": "/get_prices",
+     "function": "get_prices"
+    },
+    {
+     "source": "/get_stock_image",
+     "function": "get_stock_image"
+    }
+     ]
+  }
+}

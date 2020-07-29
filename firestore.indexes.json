@@ -1,0 +1,93 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "Stocks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "Industry",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "IndustryPos",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Stocks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "Industry",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "IndustryPos",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "MarketCap",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "MarketCapPos",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "MarketCapSize",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "RandomPos",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "Sector",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "SectorPos",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "Symbol",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "IPOyear",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Stocks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "MarketCap",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "MarketCapPos",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Stocks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "Sector",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "SectorPos",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
